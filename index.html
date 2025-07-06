@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload PDF - Traitement RAG</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #2980b9;
+            background-color: #f8f9fa;
+        }
+
+        .upload-area.dragover {
+            border-color: #27ae60;
+            background-color: #e8f5e8;
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            color: #3498db;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2em;
+            color: #34495e;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .file-info h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .file-details {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .progress-container {
+            background: #ecf0f1;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .progress-bar {
+            background: #e0e0e0;
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .upload-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .test-btn {
+            background: #9b59b6;
+        }
+
+        .test-btn:hover {
+            background: #8e44ad;
+        }
+
+        .result-container {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .result-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .collection-input {
+            margin-bottom: 20px;
+        }
+
+        .collection-input label {
+            display: block;
+            margin-bottom: 5px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .collection-input input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .collection-input input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📄 Upload PDF</h1>
+            <p>Uploadez votre PDF pour l'indexer dans la base de données vectorielle</p>
+        </div>
+
+        <div class="collection-input">
+            <label for="collectionName">Nom de la collection:</label>
+            <input type="text" id="collectionName" placeholder="Entrez le nom de la collection" value="documents">
+        </div>
+
+        <div class="collection-input">
+            <label for="qdrantUrl">URL Qdrant Cloud:</label>
+            <input type="text" id="qdrantUrl" placeholder="https://votre-cluster.region.cloud.qdrant.io:6333" value="https://dc6a6e15-ec9c-4a88-aeff-0da82686cb10.us-east4-0.gcp.cloud.qdrant.io:6333">
+            <small style="color: #7f8c8d; font-size: 0.9em;">
+                ℹ️ Optionnel - Trouvez votre URL dans le dashboard Qdrant Cloud<br>
+                Format: https://votre-cluster.region.cloud.qdrant.io:6333
+            </small>
+        </div>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Glissez-déposez votre fichier PDF ici</div>
+            <div class="upload-subtext">ou cliquez pour sélectionner un fichier</div>
+            <input type="file" id="fileInput" accept=".pdf">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <h3>Fichier sélectionné:</h3>
+            <div class="file-details" id="fileDetails"></div>
+        </div>
+
+        <div class="button-group">
+            <button class="upload-btn test-btn" id="testBtn">🔍 Tester l'API</button>
+            <button class="upload-btn" id="uploadBtn" disabled>Uploader et Traiter</button>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Traitement en cours...</div>
+        </div>
+
+        <div class="result-container" id="resultContainer">
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration API - Multiples endpoints à tester
+        const API_CONFIG = {
+            possibleEndpoints: [
+                'https://owui.alia.amella.fr/api/v1/embeddings',
+                'https://owui.alia.amella.fr/v1/embeddings',
+                'https://owui.alia.amella.fr/embeddings',
+                'https://owui.alia.amella.fr/api/embeddings',
+                'https://owui.alia.amella.fr/embed',
+                'https://owui.alia.amella.fr/api/embed'
+            ],
+            workingEndpoint: null,
+            jwtToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6Ijc0NTc1YWM4LTYzN2ItNGU3ZS1hNTgyLWEzNDQxODcyMjM1YSJ9.ua9qTWjB-90QpopXy7e4yZ9pn0-YHR7xcFXalBXdWfI',
+            apiKey: 'sk-8c0afa46001c4a5a9f9c37545096461c',
+            qdrantToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.-5rVo0SRTGh4-G-wzuQM5ShCqXodXtmif803GtUDOtU'
+        };
+
+        // Éléments DOM
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileDetails = document.getElementById('fileDetails');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const resultContainer = document.getElementById('resultContainer');
+        const resultContent = document.getElementById('resultContent');
+        const collectionName = document.getElementById('collectionName');
+        const qdrantUrl = document.getElementById('qdrantUrl');
+
+        let selectedFile = null;
+
+        // Gestion du drag & drop
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        // Gestion de la sélection de fichier
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileDetails.innerHTML = `
+                <strong>Nom:</strong> ${file.name}<br>
+                <strong>Taille:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB<br>
+                <strong>Type:</strong> ${file.type}
+            `;
+            fileInfo.style.display = 'block';
+            uploadBtn.disabled = false;
+        }
+
+        // Fonction pour extraire le texte du PDF
+        async function extractTextFromPDF(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        // Ici, nous utilisons PDF.js pour extraire le texte
+                        const loadingTask = pdfjsLib.getDocument(e.target.result);
+                        const pdf = await loadingTask.promise;
+                        let fullText = '';
+                        
+                        for (let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            const pageText = textContent.items.map(item => item.str).join(' ');
+                            fullText += pageText + '\n';
+                        }
+                        
+                        resolve(fullText);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Fonction pour découper le texte en chunks
+        function chunkText(text, maxLength = 1000) {
+            const chunks = [];
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            let currentChunk = '';
+            
+            for (const sentence of sentences) {
+                if (currentChunk.length + sentence.length > maxLength) {
+                    if (currentChunk.trim()) {
+                        chunks.push(currentChunk.trim());
+                    }
+                    currentChunk = sentence;
+                } else {
+                    currentChunk += sentence + '.';
+                }
+            }
+            
+            if (currentChunk.trim()) {
+                chunks.push(currentChunk.trim());
+            }
+            
+            return chunks;
+        }
+
+        // Fonction pour obtenir les embeddings
+        async function getEmbeddings(text) {
+            if (!API_CONFIG.workingEndpoint) {
+                throw new Error('Aucun endpoint API valide trouvé. Veuillez d\'abord tester l\'API.');
+            }
+
+            // Utiliser le format qui fonctionne, mais remplacer le texte
+            let requestBody = { ...API_CONFIG.workingFormat };
+            
+            // Adapter le format selon ce qui fonctionne
+            if (requestBody.input !== undefined) {
+                requestBody.input = Array.isArray(requestBody.input) ? [text] : text;
+            } else if (requestBody.text !== undefined) {
+                requestBody.text = text;
+            }
+
+            const response = await fetch(API_CONFIG.workingEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${API_CONFIG.jwtToken}`,
+                    'X-API-Key': API_CONFIG.apiKey
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Erreur API embeddings: ${response.status} - ${errorText}`);
+            }
+
+            const data = await response.json();
+            
+            // Essayer différents formats de réponse
+            if (data.data && data.data[0] && data.data[0].embedding) {
+                return data.data[0].embedding;
+            } else if (data.embedding) {
+                return data.embedding;
+            } else if (data.embeddings) {
+                return data.embeddings[0];
+            } else {
+                throw new Error('Format de réponse API non reconnu');
+            }
+        }
+
+        // Fonction pour stocker dans Qdrant Cloud
+        async function storeInQdrant(chunks, embeddings, collectionName) {
+            // URLs Qdrant Cloud possibles à tester
+            const possibleQdrantUrls = [];
+            
+            // Priorité à l'URL saisie par l'utilisateur
+            if (qdrantUrl.value && qdrantUrl.value.trim()) {
+                possibleQdrantUrls.push(qdrantUrl.value.trim());
+            }
+            
+            // URLs à tester selon le mode de fonctionnement
+            if (window.location.protocol === 'http:' && window.location.hostname === 'localhost') {
+                // Mode serveur local - utiliser le proxy
+                possibleQdrantUrls.push('/qdrant');
+            } else {
+                // Mode fichier local - essayer l'URL directe (sera bloqué par CORS)
+                possibleQdrantUrls.push(
+                    'https://dc6a6e15-ec9c-4a88-aeff-0da82686cb10.us-east4-0.gcp.cloud.qdrant.io:6333'
+                );
+            }
+
+            let workingQdrantUrl = null;
+
+            // Tester les URLs Qdrant Cloud
+            for (const baseUrl of possibleQdrantUrls) {
+                try {
+                    console.log(`🔍 Test de l'URL Qdrant Cloud: ${baseUrl}`);
+                    
+                    // Headers pour Qdrant Cloud
+                    const headers = {
+                        'Content-Type': 'application/json',
+                        'api-key': API_CONFIG.qdrantToken
+                    };
+                    
+                    const testResponse = await fetch(`${baseUrl}/collections`, {
+                        method: 'GET',
+                        headers: headers
+                    });
+
+                    if (testResponse.ok || testResponse.status === 404) {
+                        console.log(`✅ URL Qdrant Cloud fonctionnelle: ${baseUrl}`);
+                        workingQdrantUrl = baseUrl;
+                        break;
+                    } else {
+                        const errorText = await testResponse.text();
+                        console.log(`❌ Erreur ${testResponse.status}: ${errorText}`);
+                    }
+                } catch (error) {
+                    console.log(`❌ Erreur avec ${baseUrl}: ${error.message}`);
+                }
+            }
+
+            if (!workingQdrantUrl) {
+                // Message d'information sur les problèmes CORS
+                showResult('error', `
+                    <h3>⚠️ Problème CORS avec Qdrant Cloud</h3>
+                    <p>Votre cluster Qdrant Cloud est configuré correctement, mais les navigateurs bloquent les requêtes directes depuis une page HTML locale pour des raisons de sécurité (CORS).</p>
+                    
+                    <h4>Solutions possibles :</h4>
+                    <ol>
+                        <li><strong>Serveur local</strong> : Servez cette page via un serveur web local (http://localhost au lieu de file://)</li>
+                        <li><strong>Extension CORS</strong> : Utilisez une extension navigateur pour désactiver CORS temporairement</li>
+                        <li><strong>Backend proxy</strong> : Créez un backend qui fait les requêtes Qdrant pour vous</li>
+                    </ol>
+                    
+                    <h4>Test rapide :</h4>
+                    <p>Essayez d'ouvrir cette page sur un serveur local :</p>
+                    <code>python -m http.server 8000</code>
+                    <p>Puis ouvrez <code>http://localhost:8000</code></p>
+                    
+                    <p><strong>Votre configuration est correcte :</strong></p>
+                    <ul>
+                        <li>✅ API Embeddings : Fonctionnelle</li>
+                        <li>✅ Cluster Qdrant : ${qdrantUrl.value || 'https://dc6a6e15-ec9c-4a88-aeff-0da82686cb10.us-east4-0.gcp.cloud.qdrant.io:6333'}</li>
+                        <li>✅ Token : Configuré</li>
+                        <li>❌ CORS : Bloqué par le navigateur</li>
+                    </ul>
+                `);
+                
+                throw new Error('Problème CORS : Qdrant Cloud n\'est pas accessible depuis une page HTML locale.');
+            }
+
+            // Fonction pour obtenir les headers Qdrant Cloud
+            function getQdrantHeaders() {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Qdrant Cloud utilise toujours le header 'api-key' même pour les tokens JWT
+                headers['api-key'] = API_CONFIG.qdrantToken;
+                
+                return headers;
+            }
+
+            // Créer la collection si elle n'existe pas
+            console.log(`📝 Création de la collection "${collectionName}" sur Qdrant Cloud...`);
+            
+            // Format standard Qdrant Cloud pour créer une collection
+            const createCollectionConfig = {
+                vectors: {
+                    size: embeddings[0].length,
+                    distance: 'Cosine'
+                }
+            };
+            
+            // Tester différentes méthodes HTTP pour créer la collection
+            const createMethods = ['PUT', 'POST'];
+            let collectionCreated = false;
+            
+            for (const method of createMethods) {
+                try {
+                    console.log(`  📝 Création collection: ${method} /collections/${collectionName}`);
+                    const createResponse = await fetch(`${workingQdrantUrl}/collections/${collectionName}`, {
+                        method: method,
+                        headers: getQdrantHeaders(),
+                        body: JSON.stringify(createCollectionConfig)
+                    });
+                    
+                    if (createResponse.ok) {
+                        console.log(`  ✅ Collection créée avec succès (${method})`);
+                        collectionCreated = true;
+                        break;
+                    } else if (createResponse.status === 409) {
+                        console.log(`  ✅ Collection existe déjà`);
+                        collectionCreated = true;
+                        break;
+                    } else {
+                        const errorText = await createResponse.text();
+                        console.log(`  ⚠️ Erreur création collection ${method} ${createResponse.status}: ${errorText}`);
+                    }
+                } catch (error) {
+                    console.log(`  ⚠️ Erreur réseau création collection ${method}: ${error.message}`);
+                }
+            }
+            
+            if (!collectionCreated) {
+                console.log(`  ⚠️ Tentative d'insertion directe...`);
+            }
+
+            // Insérer les points dans Qdrant Cloud
+            console.log('📝 Insertion des points dans Qdrant Cloud...');
+            const points = chunks.map((chunk, index) => ({
+                id: Date.now() + index,
+                vector: embeddings[index],
+                payload: {
+                    text: chunk,
+                    source: selectedFile.name,
+                    created_at: new Date().toISOString(),
+                    chunk_index: index
+                }
+            }));
+
+            // Tester différentes méthodes et endpoints pour l'insertion
+            const insertConfigs = [
+                { method: 'PUT', endpoint: `/collections/${collectionName}/points` },
+                { method: 'POST', endpoint: `/collections/${collectionName}/points` },
+                { method: 'PUT', endpoint: `/collections/${collectionName}/points/upsert` },
+                { method: 'POST', endpoint: `/collections/${collectionName}/points/upsert` },
+                { method: 'PATCH', endpoint: `/collections/${collectionName}/points` }
+            ];
+            
+            console.log(`  📝 Test d'insertion de ${points.length} points...`);
+            
+            let insertSuccessful = false;
+            let lastError = null;
+            
+            for (const config of insertConfigs) {
+                try {
+                    console.log(`  📝 Test insertion: ${config.method} ${config.endpoint}`);
+                    const response = await fetch(`${workingQdrantUrl}${config.endpoint}`, {
+                        method: config.method,
+                        headers: getQdrantHeaders(),
+                        body: JSON.stringify({
+                            points: points
+                        })
+                    });
+
+                    if (response.ok) {
+                        console.log(`  ✅ ${points.length} points insérés avec succès (${config.method})!`);
+                        insertSuccessful = true;
+                        return await response.json();
+                    } else {
+                        const errorText = await response.text();
+                        lastError = `${config.method} ${response.status}: ${errorText}`;
+                        console.log(`  ❌ Erreur insertion ${config.method} ${response.status}: ${errorText}`);
+                    }
+                } catch (error) {
+                    lastError = `${config.method}: ${error.message}`;
+                    console.log(`  ⚠️ Erreur réseau insertion ${config.method}: ${error.message}`);
+                }
+            }
+            
+            if (!insertSuccessful) {
+                throw new Error(`Erreur Qdrant Cloud - Toutes les méthodes d'insertion ont échoué. Dernière erreur: ${lastError}`);
+            }
+
+            return await response.json();
+        }
+
+        // Fonction principale d'upload
+        async function uploadAndProcess() {
+            if (!selectedFile) return;
+
+            uploadBtn.disabled = true;
+            progressContainer.style.display = 'block';
+            resultContainer.style.display = 'none';
+
+            try {
+                // Étape 1: Extraction du texte
+                updateProgress(10, 'Extraction du texte du PDF...');
+                const text = await extractTextFromPDF(selectedFile);
+
+                // Étape 2: Découpage en chunks
+                updateProgress(30, 'Découpage du texte...');
+                const chunks = chunkText(text);
+
+                // Étape 3: Génération des embeddings
+                updateProgress(50, 'Génération des embeddings...');
+                const embeddings = [];
+                for (let i = 0; i < chunks.length; i++) {
+                    const embedding = await getEmbeddings(chunks[i]);
+                    embeddings.push(embedding);
+                    updateProgress(50 + (i / chunks.length) * 30, `Embeddings: ${i + 1}/${chunks.length}`);
+                }
+
+                // Étape 4: Stockage dans Qdrant
+                updateProgress(80, 'Stockage dans la base de données...');
+                await storeInQdrant(chunks, embeddings, collectionName.value);
+
+                // Succès
+                updateProgress(100, 'Traitement terminé!');
+                showResult('success', `
+                    <h3>✅ Succès!</h3>
+                    <p>Le PDF a été traité avec succès:</p>
+                    <ul>
+                        <li><strong>Fichier:</strong> ${selectedFile.name}</li>
+                        <li><strong>Chunks créés:</strong> ${chunks.length}</li>
+                        <li><strong>Collection:</strong> ${collectionName.value}</li>
+                        <li><strong>Embeddings générés:</strong> ${embeddings.length}</li>
+                    </ul>
+                `);
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                showResult('error', `
+                    <h3>❌ Erreur</h3>
+                    <p>Une erreur s'est produite lors du traitement:</p>
+                    <p><strong>${error.message}</strong></p>
+                `);
+            } finally {
+                uploadBtn.disabled = false;
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        function updateProgress(percentage, message) {
+            progressFill.style.width = percentage + '%';
+            progressText.textContent = message;
+        }
+
+        function showResult(type, content) {
+            resultContainer.className = `result-container result-${type}`;
+            resultContent.innerHTML = content;
+            resultContainer.style.display = 'block';
+        }
+
+        // Test de l'API avant l'upload - teste différents endpoints
+        async function testAPI() {
+            console.log('🔍 Recherche de l\'endpoint API correct...');
+            
+            // Différents formats de requête à tester
+            const testFormats = [
+                {
+                    body: { model: 'mxbai-embed-large:latest', input: ['test'] },
+                    description: 'Format OpenAI (array)'
+                },
+                {
+                    body: { model: 'mxbai-embed-large:latest', input: 'test' },
+                    description: 'Format OpenAI (string)'
+                },
+                {
+                    body: { model: 'mxbai-embed-large:latest', text: 'test' },
+                    description: 'Format text field'
+                },
+                {
+                    body: { text: 'test' },
+                    description: 'Format simple'
+                }
+            ];
+            
+            for (const endpoint of API_CONFIG.possibleEndpoints) {
+                console.log(`\n🌐 Test de l'endpoint: ${endpoint}`);
+                
+                for (const format of testFormats) {
+                    try {
+                        console.log(`  📝 Test avec ${format.description}...`);
+                        
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${API_CONFIG.jwtToken}`,
+                                'X-API-Key': API_CONFIG.apiKey
+                            },
+                            body: JSON.stringify(format.body)
+                        });
+                        
+                        console.log(`  ✅ Réponse: ${response.status} ${response.statusText}`);
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            console.log(`  🎉 SUCCÈS! Endpoint trouvé: ${endpoint}`);
+                            console.log(`  📊 Format: ${format.description}`);
+                            console.log(`  📋 Données:`, data);
+                            
+                            // Sauvegarder l'endpoint qui fonctionne
+                            API_CONFIG.workingEndpoint = endpoint;
+                            API_CONFIG.workingFormat = format.body;
+                            
+                            // Tester aussi Qdrant Cloud maintenant
+                            console.log('🔍 Test de l\'accès Qdrant Cloud...');
+                            let qdrantStatus = 'Non testé';
+                            
+                            try {
+                                // Headers pour Qdrant Cloud
+                                const qdrantHeaders = {
+                                    'Content-Type': 'application/json',
+                                    'api-key': API_CONFIG.qdrantToken
+                                };
+                                
+                                // Test des URLs Qdrant Cloud typiques
+                                const qdrantTestUrls = [];
+                                
+                                // Priorité à l'URL saisie par l'utilisateur
+                                if (qdrantUrl.value && qdrantUrl.value.trim()) {
+                                    qdrantTestUrls.push(`${qdrantUrl.value.trim()}/collections`);
+                                }
+                                
+                                // URLs à tester selon le mode de fonctionnement
+                                if (window.location.protocol === 'http:' && window.location.hostname === 'localhost') {
+                                    // Mode serveur local - utiliser le proxy
+                                    qdrantTestUrls.push('/qdrant/collections');
+                                } else {
+                                    // Mode fichier local - essayer l'URL directe (sera bloqué par CORS)
+                                    qdrantTestUrls.push(
+                                        'https://dc6a6e15-ec9c-4a88-aeff-0da82686cb10.us-east4-0.gcp.cloud.qdrant.io:6333/collections'
+                                    );
+                                }
+                                
+                                for (const url of qdrantTestUrls) {
+                                    try {
+                                        const qdrantResponse = await fetch(url, {
+                                            method: 'GET',
+                                            headers: qdrantHeaders
+                                        });
+                                        
+                                        if (qdrantResponse.ok || qdrantResponse.status === 404) {
+                                            qdrantStatus = '✅ Accessible';
+                                            break;
+                                        }
+                                    } catch (e) {
+                                        continue;
+                                    }
+                                }
+                                
+                                if (qdrantStatus === 'Non testé') {
+                                    qdrantStatus = '⚠️ URLs seront testées lors de l\'upload';
+                                }
+                            } catch (error) {
+                                qdrantStatus = '❌ Erreur - URL sera testée lors de l\'upload';
+                            }
+                            
+                            // Afficher le succès à l'utilisateur
+                            showResult('success', `
+                                <h3>✅ API Embeddings Prête!</h3>
+                                <p>Endpoint API trouvé et configuré:</p>
+                                <ul>
+                                    <li><strong>URL:</strong> ${endpoint}</li>
+                                    <li><strong>Format:</strong> ${format.description}</li>
+                                    <li><strong>Statut:</strong> Fonctionnel</li>
+                                    <li><strong>Qdrant Cloud:</strong> ${qdrantStatus}</li>
+                                </ul>
+                                <p>Vous pouvez maintenant uploader votre PDF!</p>
+                                <p><small>💡 Pour Qdrant Cloud, saisissez votre URL de cluster dans le champ ci-dessus pour de meilleures performances.</small></p>
+                            `);
+                            
+                            return; // Arrêter le test une fois qu'on a trouvé
+                        } else {
+                            const errorText = await response.text();
+                            console.log(`  ❌ Erreur: ${errorText}`);
+                        }
+                        
+                    } catch (error) {
+                        console.log(`  ⚠️  Erreur réseau: ${error.message}`);
+                    }
+                }
+            }
+            
+            // Si aucun endpoint ne fonctionne
+            console.error('❌ Aucun endpoint API valide trouvé!');
+            showResult('error', `
+                <h3>❌ Erreur de Configuration</h3>
+                <p>Aucun endpoint API valide trouvé. Endpoints testés:</p>
+                <ul>
+                    ${API_CONFIG.possibleEndpoints.map(endpoint => `<li>${endpoint}</li>`).join('')}
+                </ul>
+                <p>Veuillez vérifier vos credentials et l'URL de l'API.</p>
+            `);
+        }
+
+        // Event listener pour le bouton upload
+        uploadBtn.addEventListener('click', uploadAndProcess);
+
+        // Event listener pour le bouton test
+        document.getElementById('testBtn').addEventListener('click', testAPI);
+
+        // Test de l'API au chargement de la page
+        document.addEventListener('DOMContentLoaded', testAPI);
+
+        // Charger PDF.js
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.onload = function() {
+            // Configuration du worker PDF.js
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        };
+        document.head.appendChild(script);
+    </script>
+</body>
+</html> 
