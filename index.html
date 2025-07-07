@@ -236,6 +236,24 @@
             outline: none;
             border-color: #3498db;
         }
+
+        .context-info {
+            background: linear-gradient(135deg, #74b9ff, #0984e3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 0.9em;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(116, 185, 255, 0.2);
+        }
+
+        .context-info code {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
     </style>
 </head>
 <body>
@@ -243,6 +261,7 @@
         <div class="header">
             <h1>📄 Upload PDF</h1>
             <p>Uploadez votre PDF pour l'indexer dans la base de données vectorielle</p>
+            <div id="contextInfo" class="context-info"></div>
         </div>
 
         <div class="collection-input">
@@ -318,6 +337,7 @@
         const resultContent = document.getElementById('resultContent');
         const collectionName = document.getElementById('collectionName');
         const qdrantUrl = document.getElementById('qdrantUrl');
+        const contextInfo = document.getElementById('contextInfo');
 
         let selectedFile = null;
 
@@ -507,33 +527,79 @@
             }
 
             if (!workingQdrantUrl) {
+                // Détecter le contexte d'exécution
+                const isGitHubPages = window.location.hostname.includes('github.io');
+                const isLocalFile = window.location.protocol === 'file:';
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                
+                let contextMessage = '';
+                let solutions = '';
+                
+                if (isGitHubPages) {
+                    contextMessage = `
+                        <p>🌐 Vous utilisez GitHub Pages (<code>${window.location.hostname}</code>). 
+                        L'API embeddings fonctionne parfaitement, mais Qdrant Cloud bloque les requêtes 
+                        depuis GitHub Pages pour des raisons de sécurité (CORS).</p>
+                    `;
+                    
+                    solutions = `
+                        <h4>🚀 Solution recommandée :</h4>
+                        <ol>
+                            <li><strong>Téléchargez les fichiers localement</strong> depuis <a href="https://github.com/albafika83/ragmbxaialia/archive/main.zip" target="_blank">GitHub</a></li>
+                            <li><strong>Lancez le serveur proxy inclus :</strong>
+                                <br>• Windows : Double-cliquez sur <code>start_server.bat</code>
+                                <br>• Linux/Mac : <code>./start_server.sh</code>
+                                <br>• Ou manuellement : <code>python proxy_server.py</code>
+                            </li>
+                            <li><strong>Ouvrez</strong> <code>http://localhost:8000</code></li>
+                        </ol>
+                        
+                        <h4>🔧 Alternative rapide :</h4>
+                        <p>Installez une extension CORS dans votre navigateur :</p>
+                        <ul>
+                            <li><strong>Chrome :</strong> "CORS Unblock" ou "Allow CORS"</li>
+                            <li><strong>Firefox :</strong> "CORS Everywhere"</li>
+                        </ul>
+                    `;
+                } else if (isLocalFile) {
+                    contextMessage = `
+                        <p>📁 Vous ouvrez le fichier directement (<code>file://</code>). 
+                        Pour des raisons de sécurité, les navigateurs bloquent les requêtes vers Qdrant Cloud.</p>
+                    `;
+                    
+                    solutions = `
+                        <h4>🚀 Solutions :</h4>
+                        <ol>
+                            <li><strong>Lancez le serveur proxy :</strong>
+                                <br>• Windows : Double-cliquez sur <code>start_server.bat</code>
+                                <br>• Linux/Mac : <code>./start_server.sh</code>
+                                <br>• Ou : <code>python proxy_server.py</code>
+                            </li>
+                            <li><strong>Serveur web simple :</strong> <code>python -m http.server 8000</code></li>
+                            <li><strong>Extension CORS :</strong> Installez "Allow CORS" dans votre navigateur</li>
+                        </ol>
+                    `;
+                }
+                
                 // Message d'information sur les problèmes CORS
                 showResult('error', `
                     <h3>⚠️ Problème CORS avec Qdrant Cloud</h3>
-                    <p>Votre cluster Qdrant Cloud est configuré correctement, mais les navigateurs bloquent les requêtes directes depuis une page HTML locale pour des raisons de sécurité (CORS).</p>
+                    ${contextMessage}
                     
-                    <h4>Solutions possibles :</h4>
-                    <ol>
-                        <li><strong>Serveur local</strong> : Servez cette page via un serveur web local (http://localhost au lieu de file://)</li>
-                        <li><strong>Extension CORS</strong> : Utilisez une extension navigateur pour désactiver CORS temporairement</li>
-                        <li><strong>Backend proxy</strong> : Créez un backend qui fait les requêtes Qdrant pour vous</li>
-                    </ol>
+                    ${solutions}
                     
-                    <h4>Test rapide :</h4>
-                    <p>Essayez d'ouvrir cette page sur un serveur local :</p>
-                    <code>python -m http.server 8000</code>
-                    <p>Puis ouvrez <code>http://localhost:8000</code></p>
-                    
-                    <p><strong>Votre configuration est correcte :</strong></p>
+                    <h4>📊 État de votre configuration :</h4>
                     <ul>
-                        <li>✅ API Embeddings : Fonctionnelle</li>
-                        <li>✅ Cluster Qdrant : ${qdrantUrl.value || 'https://dc6a6e15-ec9c-4a88-aeff-0da82686cb10.us-east4-0.gcp.cloud.qdrant.io:6333'}</li>
-                        <li>✅ Token : Configuré</li>
-                        <li>❌ CORS : Bloqué par le navigateur</li>
+                        <li>✅ <strong>API Embeddings :</strong> Fonctionnelle</li>
+                        <li>✅ <strong>Cluster Qdrant :</strong> ${qdrantUrl.value || 'https://dc6a6e15-ec9c-4a88-aeff-0da82686cb10.us-east4-0.gcp.cloud.qdrant.io:6333'}</li>
+                        <li>✅ <strong>Token :</strong> Configuré</li>
+                        <li>❌ <strong>CORS :</strong> Bloqué par le navigateur</li>
                     </ul>
+                    
+                    <p><small>💡 <strong>Conseil :</strong> Le serveur proxy inclus est la solution la plus simple et sécurisée.</small></p>
                 `);
                 
-                throw new Error('Problème CORS : Qdrant Cloud n\'est pas accessible depuis une page HTML locale.');
+                throw new Error('Problème CORS : Qdrant Cloud n\'est pas accessible depuis ce contexte.');
             }
 
             // Fonction pour obtenir les headers Qdrant Cloud
@@ -872,8 +938,32 @@
         // Event listener pour le bouton test
         document.getElementById('testBtn').addEventListener('click', testAPI);
 
+        // Afficher le contexte d'exécution
+        function showExecutionContext() {
+            const isGitHubPages = window.location.hostname.includes('github.io');
+            const isLocalFile = window.location.protocol === 'file:';
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            let message = '';
+            
+            if (isGitHubPages) {
+                message = `🌐 Mode GitHub Pages - <code>${window.location.hostname}</code> | ⚠️ CORS limité pour Qdrant Cloud`;
+            } else if (isLocalhost) {
+                message = `🏠 Mode serveur local - <code>${window.location.href}</code> | ✅ Tous les services disponibles`;
+            } else if (isLocalFile) {
+                message = `📁 Mode fichier local - <code>file://</code> | ⚠️ CORS limité pour Qdrant Cloud`;
+            } else {
+                message = `🌐 Mode web - <code>${window.location.hostname}</code> | État CORS à déterminer`;
+            }
+            
+            contextInfo.innerHTML = message;
+        }
+
         // Test de l'API au chargement de la page
-        document.addEventListener('DOMContentLoaded', testAPI);
+        document.addEventListener('DOMContentLoaded', () => {
+            showExecutionContext();
+            testAPI();
+        });
 
         // Charger PDF.js
         const script = document.createElement('script');
